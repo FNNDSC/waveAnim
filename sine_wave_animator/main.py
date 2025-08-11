@@ -48,8 +48,8 @@ class SineWaveAnimator:
     
     This class generates multiple sine waves with random parameters and animates
     them progressively from left to right. After all waves are complete, it
-    calculates and animates the upper envelope showing the pointwise maximum
-    across all waves.
+    calculates and animates the upper envelope showing either the pointwise maximum
+    across all waves or the sum of all waves.
     
     Attributes:
         num_waves (int): Number of sine waves to generate
@@ -72,11 +72,13 @@ class SineWaveAnimator:
         envelope_point (int): Current point index for envelope animation
         envelope_animating (bool): Flag indicating if envelope is currently animating
         full_envelope (np.ndarray): Pre-calculated envelope data
+        envelope_type (str): Type of envelope calculation ("max" or "sum")
     """
     
     def __init__(self, num_waves: int = 8, x_range: Tuple[float, float] = (-2*np.pi, 2*np.pi), 
                  num_points: int = 1000, amplitude_range: Tuple[float, float] = (0.2, 3.0), 
-                 frequency_range: Tuple[float, float] = (0.2, 4.0), y_margin: float = 0.1) -> None:
+                 frequency_range: Tuple[float, float] = (0.2, 4.0), y_margin: float = 0.1,
+                 envelope_type: str = "max") -> None:
         """
         Initialize the SineWaveAnimator with specified parameters.
         
@@ -92,6 +94,8 @@ class SineWaveAnimator:
                                              Defaults to (0.2, 4.0).
             y_margin (float, optional): Fraction of max amplitude to add as y-axis margin. 
                                       Defaults to 0.1 (10%).
+            envelope_type (str, optional): Type of envelope ("max" or "sum"). 
+                                         Defaults to "max".
         
         Raises:
             ValueError: If num_waves < 1 or if range tuples have min >= max
@@ -102,10 +106,13 @@ class SineWaveAnimator:
             raise ValueError("amplitude_range must have min < max")
         if frequency_range[0] >= frequency_range[1]:
             raise ValueError("frequency_range must have min < max")
+        if envelope_type not in ["max", "sum"]:
+            raise ValueError("envelope_type must be 'max' or 'sum'")
             
         self.num_waves: int = num_waves
         self.x_range: Tuple[float, float] = x_range
         self.num_points: int = num_points
+        self.envelope_type: str = envelope_type
         self.x: npt.NDArray[np.float64] = np.linspace(x_range[0], x_range[1], num_points)
         
         # Generate random wave parameters with specified ranges
@@ -125,14 +132,23 @@ class SineWaveAnimator:
         self.fig, self.ax = plt.subplots(figsize=(12, 8))
         self.ax.set_xlim(x_range[0], x_range[1])
         
-        # Set y-axis limits based on maximum possible amplitude with margin
-        max_amplitude: float = amplitude_range[1]
-        y_range: float = max_amplitude * (1 + y_margin)
+        # Set y-axis limits based on envelope type and amplitude with margin
+        if envelope_type == "max":
+            max_y_value = amplitude_range[1]
+            envelope_label = "Max Envelope"
+        else:  # envelope_type == "sum"
+            # For sum, waves can interfere constructively or destructively
+            # Maximum possible value is sum of all max amplitudes
+            # Minimum possible value is negative sum of all max amplitudes
+            max_y_value = amplitude_range[1] * num_waves
+            envelope_label = "Wave Sum"
+            
+        y_range: float = max_y_value * (1 + y_margin)
         self.ax.set_ylim(-y_range, y_range)
         
         self.ax.set_xlabel('x (radians)', color='white')
         self.ax.set_ylabel('Amplitude', color='white')
-        self.ax.set_title('Animated Sine Waves with Max Envelope', color='white')
+        self.ax.set_title(f'Animated Sine Waves with {envelope_label}', color='white')
         self.ax.grid(True, alpha=0.3)
         
         # Initialize line objects
@@ -150,7 +166,7 @@ class SineWaveAnimator:
         
         # Envelope line
         self.envelope_line: matplotlib.lines.Line2D
-        self.envelope_line, = self.ax.plot([], [], color='yellow', linewidth=2, alpha=0.9, label='Max Envelope')
+        self.envelope_line, = self.ax.plot([], [], color='yellow', linewidth=2, alpha=0.9, label=envelope_label)
         self.ax.legend()
         
         # Animation state
@@ -188,6 +204,25 @@ class SineWaveAnimator:
         )
         return result
     
+    def calculate_envelope(self) -> npt.NDArray[np.float64]:
+        """Calculate the envelope based on the specified envelope type."""
+        if self.envelope_type == "max":
+            return self.calculate_pointwise_maximum()
+        else:  # envelope_type == "sum"
+            return self.calculate_wave_sum()
+    
+    def calculate_wave_sum(self) -> npt.NDArray[np.float64]:
+        """
+        Calculate the sum of all sine waves at each point.
+        
+        Returns:
+            np.ndarray: Array of summed wave values at each x-coordinate
+        """
+        # Sum all waves at each x point
+        wave_sum: npt.NDArray[np.float64] = np.zeros_like(self.x)
+        for i in range(self.num_waves):
+            wave_sum += self.generate_wave(i)
+        
     def calculate_pointwise_maximum(self) -> npt.NDArray[np.float64]:
         """
         Calculate the pointwise maximum across all sine waves.
@@ -208,7 +243,7 @@ class SineWaveAnimator:
         envelope: npt.NDArray[np.float64] = np.max(all_waves, axis=0)
         return envelope
     
-    def calculate_envelope(self, signal: npt.NDArray[np.float64], window_size: int = 50) -> npt.NDArray[np.float64]:
+    def calculate_envelope_legacy(self, signal: npt.NDArray[np.float64], window_size: int = 50) -> npt.NDArray[np.float64]:
         """
         Calculate upper envelope of a signal using local maxima.
         
@@ -281,7 +316,7 @@ class SineWaveAnimator:
                 self.envelope_animating = True
                 self.envelope_point = 0
                 # Pre-calculate the full envelope once
-                self.full_envelope = self.calculate_pointwise_maximum()
+                self.full_envelope = self.calculate_envelope()
             
             if self.envelope_animating and not self.all_waves_complete and self.full_envelope is not None:
                 # Animate envelope drawing
@@ -332,7 +367,7 @@ class SineWaveAnimator:
 def create_envelope_tracer(num_waves: int = 10, animation_speed: int = 30, 
                           amplitude_range: Tuple[float, float] = (0.2, 3.0), 
                           frequency_range: Tuple[float, float] = (0.2, 4.0), 
-                          y_margin: float = 0.1) -> matplotlib.animation.FuncAnimation:
+                          y_margin: float = 0.1, envelope_type: str = "max") -> matplotlib.animation.FuncAnimation:
     """
     Create and run a sine wave animation with envelope tracing.
     
@@ -349,6 +384,8 @@ def create_envelope_tracer(num_waves: int = 10, animation_speed: int = 30,
                                          Defaults to (0.2, 4.0).
         y_margin (float, optional): Fraction of max amplitude to add as y-axis margin. 
                                   Defaults to 0.1 (10%).
+        envelope_type (str, optional): Type of envelope ("max" or "sum"). 
+                                     Defaults to "max".
     
     Returns:
         matplotlib.animation.FuncAnimation: The animation object
@@ -359,13 +396,15 @@ def create_envelope_tracer(num_waves: int = 10, animation_speed: int = 30,
             num_waves=15,
             amplitude_range=(0.5, 4.0),
             frequency_range=(0.1, 6.0),
-            y_margin=0.05
+            y_margin=0.05,
+            envelope_type="sum"
         )
     """
     animator: SineWaveAnimator = SineWaveAnimator(num_waves=num_waves, 
                                                  amplitude_range=amplitude_range,
                                                  frequency_range=frequency_range,
-                                                 y_margin=y_margin)
+                                                 y_margin=y_margin,
+                                                 envelope_type=envelope_type)
     animator.animation_speed = animation_speed
     
     print(f"Generating {num_waves} sine waves...")
@@ -393,13 +432,14 @@ def main() -> matplotlib.animation.FuncAnimation:
         --freq-min: Minimum frequency (default: 0.2)
         --freq-max: Maximum frequency (default: 4.0)
         --y-margin: Y-axis margin as fraction of max amplitude (default: 0.1)
+        --envelope: Envelope type - 'max' for pointwise maximum, 'sum' for wave sum (default: max)
     
     Returns:
         matplotlib.animation.FuncAnimation: The animation object
         
     Example:
         Command line usage:
-        $ sine-animator --waves 15 --amp-min 0.1 --amp-max 4.0 --y-margin 0.05
+        $ sine-animator --waves 15 --amp-min 0.1 --amp-max 4.0 --y-margin 0.05 --envelope sum
     """
     parser: argparse.ArgumentParser = argparse.ArgumentParser(description="Animate sine waves with upper envelope")
     parser.add_argument("--waves", type=int, default=8, help="Number of sine waves (default: 8)")
@@ -409,6 +449,7 @@ def main() -> matplotlib.animation.FuncAnimation:
     parser.add_argument("--freq-min", type=float, default=0.2, help="Minimum frequency (default: 0.2)")
     parser.add_argument("--freq-max", type=float, default=4.0, help="Maximum frequency (default: 4.0)")
     parser.add_argument("--y-margin", type=float, default=0.1, help="Y-axis margin as fraction of max amplitude (default: 0.1)")
+    parser.add_argument("--envelope", choices=["max", "sum"], default="max", help="Envelope type: 'max' for pointwise maximum, 'sum' for wave sum (default: max)")
     
     args: argparse.Namespace = parser.parse_args()
     
@@ -416,12 +457,14 @@ def main() -> matplotlib.animation.FuncAnimation:
     print(f"Amplitude range: {args.amp_min} to {args.amp_max}")
     print(f"Frequency range: {args.freq_min} to {args.freq_max}")
     print(f"Y-axis margin: {args.y_margin * 100}%")
+    print(f"Envelope type: {args.envelope}")
     
     anim: matplotlib.animation.FuncAnimation = create_envelope_tracer(num_waves=args.waves, 
                                                                      animation_speed=args.speed,
                                                                      amplitude_range=(args.amp_min, args.amp_max),
                                                                      frequency_range=(args.freq_min, args.freq_max),
-                                                                     y_margin=args.y_margin)
+                                                                     y_margin=args.y_margin,
+                                                                     envelope_type=args.envelope)
     return anim
 
 
