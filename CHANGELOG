@@ -1,0 +1,41 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [1.0.0] - 2025-08-10
+
+### Added
+- Initial release of WaveAnim
+- Real-time animated sine wave generation
+- Pointwise maximum envelope tracing
+- Command-line interface with full parameter control
+- Programmatic API for custom integrations
+- Dark theme with colorful wave visualization
+- Comprehensive type hints throughout codebase
+- Full documentation with docstrings
+- Support for customizable amplitude and frequency ranges
+- Configurable y-axis margins
+- Animation speed control
+- GIF export functionality
+
+### Features
+- Progressive wave drawing with thick/thin line transitions
+- HSV-based color distribution for visual clarity
+- Matplotlib-based smooth animations
+- Error handling and input validation
+- Reproducible results with seeded random generation
+
+### Technical
+- Python 3.8+ compatibility
+- NumPy and matplotlib dependencies
+- Type-safe implementation with mypy support
+- Modular class-based architecture
+- Clean separation of concerns
+
+[Unreleased]: https://github.com/FNNDSC/waveAnim/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/FNNDSC/waveAnim/releases/tag/v1.0.0

@@ -1,0 +1,18 @@
+# Production dependencies
+-r requirements.txt
+
+# Development dependencies
+pytest>=7.0.0
+pytest-cov>=4.0.0
+black>=22.0.0
+isort>=5.10.0
+mypy>=1.0.0
+flake8>=5.0.0
+pre-commit>=2.20.0
+
+# Documentation
+sphinx>=5.0.0
+sphinx-rtd-theme>=1.0.0
+
+# Type stubs
+types-pillow>=8.3.0
