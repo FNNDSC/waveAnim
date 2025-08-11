@@ -45,6 +45,7 @@ dev = [
     "flake8>=5.0.0",
     "pre-commit>=2.20.0",
     "types-pillow>=8.3.0",
+    "pudb"
 ]
 docs = [
     "sphinx>=5.0.0",
