@@ -30,6 +30,7 @@ Author: Generated for sine wave visualization
 Version: 1.0.0
 """
 
+import sys
 from typing import Optional
 import numpy as np
 import numpy.typing as npt
@@ -419,25 +420,26 @@ class SineWaveAnimator:
 
                 if self.envelope_point >= len(self.x):
                     self.all_waves_complete = True
+                    # Don't stop animation during save - let it complete naturally
+                    # Only stop for display mode
+                    if self.animation_obj is not None and not hasattr(self, "_saving"):
+                        self.animation_obj.event_source.stop()
 
         return self.wave_lines + self.thick_lines + [self.envelope_line]
 
     def run_animation(
-        self,
-        interval: int = 50,
-        save_filename: Optional[str] = None
+        self, interval: int = 50, save_filename: Optional[str] = None
     ) -> animation.FuncAnimation:
         """
         Start and run the sine wave animation.
 
-        Creates a FuncAnimation object and optionally saves the animation to a file.
-        Supports both GIF and MP4 formats based on filename extension. When saving,
-        the animation runs twice: once to generate the file, then again for display.
+        Creates a FuncAnimation object. If save_filename is provided, saves the animation
+        to file. Otherwise displays on screen. After completion, prompts to exit.
 
         Args:
             interval (int, optional): Milliseconds between frames. Defaults to 50.
             save_filename (str, optional): Filename to save animation. Extension determines
-                                         format (.gif or .mp4). If None, no file is saved.
+                                         format (.gif or .mp4). If None, displays on screen.
                                          Defaults to None.
 
         Returns:
@@ -449,60 +451,99 @@ class SineWaveAnimator:
 
         Note:
             MP4 export requires ffmpeg to be installed on the system.
-            When saving, animation plays through once to save, then again for display.
+            Program exits after animation completes and user presses Enter.
         """
 
         if save_filename:
-            print("\n" + "="*60)
-            print("NOTE: Animation will run twice:")
-            print("  1. First pass: Saving to file (no display)")
-            print("  2. Second pass: Displaying on screen")
-            print("="*60 + "\n")
+            print(f"\nSaving animation to {save_filename}...")
 
-            # Create animation for saving
+            # Set flag to indicate we're saving (prevents early stop in animate())
+            self._saving = True
+
+            # Calculate total frames needed for save
+            total_frames = 0
+            if self.envelope_first:
+                total_frames += (len(self.x) + self.animation_speed - 1) // self.animation_speed + 1
+            # Each wave animation
+            total_frames += self.num_waves * (
+                (len(self.x) + self.animation_speed - 1) // self.animation_speed + 1
+            )
+            # Final envelope
+            total_frames += (len(self.x) + self.animation_speed - 1) // self.animation_speed + 1
+            # Add some buffer frames
+            total_frames += 10
+
+            # Create animation with explicit save_count to prevent unbounded frames
             self.animation_obj = animation.FuncAnimation(
-                self.fig, self.animate, interval=interval, blit=True, repeat=False
+                self.fig,
+                self.animate,
+                interval=interval,
+                blit=True,
+                repeat=False,
+                save_count=total_frames,
             )
 
-            if save_filename.endswith('.gif'):
-                print(f"Saving animation as GIF to {save_filename}...")
-                self.animation_obj.save(save_filename, writer='pillow', fps=20)
-                print(f"Animation saved to {save_filename}")
-            elif save_filename.endswith('.mp4'):
-                print(f"Saving animation as MP4 to {save_filename}...")
+            if save_filename.endswith(".gif"):
+                print(f"Generating GIF ({total_frames} frames)...")
+                writer = animation.PillowWriter(fps=20)
+                self.animation_obj.save(
+                    save_filename,
+                    writer=writer,
+                    progress_callback=lambda i, n: print(f"Frame {i}/{n}", end="\r"),
+                )
+                print(f"\nAnimation saved to {save_filename}")
+
+            elif save_filename.endswith(".mp4"):
+                print(f"Generating MP4 ({total_frames} frames)...")
                 try:
-                    self.animation_obj.save(save_filename, writer='ffmpeg', fps=30, bitrate=1800)
-                    print(f"Animation saved to {save_filename}")
+                    writer = animation.FFMpegWriter(fps=30, bitrate=1800)
+                    self.animation_obj.save(
+                        save_filename,
+                        writer=writer,
+                        progress_callback=lambda i, n: print(f"Frame {i}/{n}", end="\r"),
+                    )
+                    print(f"\nAnimation saved to {save_filename}")
                 except Exception as e:
                     raise RuntimeError(f"Failed to save MP4 (is ffmpeg installed?): {e}")
             else:
                 raise ValueError(f"Unsupported file extension. Use .gif or .mp4")
 
-            # Reset everything for display
-            self.current_wave = 0
-            self.current_point = 0
-            self.envelope_point = 0
-            self.envelope_animating = False
-            self.envelope_first_complete = False
-            self.all_waves_complete = False
-            self.full_envelope = None
+            # After save completes, exit
+            print("\nPress Enter to exit...")
+            input()
+            sys.exit(0)
+        else:
+            # Display animation on screen
+            print("Displaying animation...")
 
-            # Clear all line data
-            for line in self.wave_lines + self.thick_lines:
-                line.set_data([], [])
-            self.envelope_line.set_data([], [])
-            self.envelope_line.set_color("yellow")
-            self.envelope_line.set_alpha(0.9)
+            # Create animation for display (no save_count needed)
+            self.animation_obj = animation.FuncAnimation(
+                self.fig, self.animate, interval=interval, blit=True, repeat=False
+            )
 
-            print("\nNow displaying animation on screen...")
+            # Set up a timer to check for completion
+            def check_complete():
+                if self.all_waves_complete:
+                    print("\nAnimation complete! Press Enter to exit...")
+                    input()
+                    plt.close("all")
+                    sys.exit(0)
+                else:
+                    # Check again in 500ms
+                    self.fig.canvas.get_tk_widget().after(500, check_complete)
 
-        # Create animation for display
-        self.animation_obj = animation.FuncAnimation(
-            self.fig, self.animate, interval=interval, blit=True, repeat=False
-        )
+            # Start checking after a delay (only works with TkAgg backend)
+            try:
+                self.fig.canvas.get_tk_widget().after(1000, check_complete)
+            except:
+                # For non-Tk backends, use a simpler approach
+                def on_close(event):
+                    sys.exit(0)
 
-        plt.tight_layout()
-        plt.show()
+                self.fig.canvas.mpl_connect("close_event", on_close)
+
+            plt.tight_layout()
+            plt.show()
 
         return self.animation_obj
 
@@ -648,13 +689,13 @@ def main() -> animation.FuncAnimation:
         "--save",
         type=str,
         metavar="FILENAME",
-        help="Save animation to file (use .gif or .mp4 extension). Animation runs twice: once to save, once to display.",
+        help="Save animation to file (use .gif or .mp4 extension). Animation saves offscreen then exits.",
     )
 
     args: argparse.Namespace = parser.parse_args()
 
     # Validate save filename if provided
-    if args.save and not (args.save.endswith('.gif') or args.save.endswith('.mp4')):
+    if args.save and not (args.save.endswith(".gif") or args.save.endswith(".mp4")):
         parser.error("--save filename must end with .gif or .mp4")
 
     print(f"Starting sine wave animation with {args.waves} waves...")

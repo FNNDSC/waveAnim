@@ -9,6 +9,7 @@ An animated sine wave generator with envelope tracing, built with Python and mat
 - **Envelope-First Option**: Optionally animate the envelope before showing individual waves
 - **Pause Control**: Interactive pausing at key animation points
 - **Export Capabilities**: Save animations as GIF or MP4 files
+- **Auto-Exit**: Clean program termination after animation completes
 - **Customizable Parameters**: Control amplitude ranges, frequency ranges, and animation speed
 - **Visual Effects**: Thick lines during drawing, thin lines when complete
 - **Dark Theme**: Professional dark background with colorful waves
@@ -61,7 +62,7 @@ sine-animator --envelope sum --y-margin 0.05
 # Show envelope animation first, then waves
 sine-animator --envelope-first --pause
 
-# Save animation to file (displays after saving)
+# Save animation to file (runs offscreen, then exits)
 sine-animator --save animation.mp4
 sine-animator --save output.gif
 ```
@@ -123,7 +124,7 @@ anim = animator.run_animation(interval=30, save_filename="animation.gif")
 | `--envelope` | choice | max | Envelope type: 'max' or 'sum' |
 | `--envelope-first` | flag | False | Show envelope animation before waves |
 | `--pause` | flag | False | Pause for user input at key animation points |
-| `--save` | str | None | Save animation to file (.gif or .mp4) |
+| `--save` | str | None | Save animation to file (.gif or .mp4). Saves offscreen then exits |
 
 ## Examples
 
@@ -146,6 +147,12 @@ sine-animator --waves 6 --envelope-first --pause
 ```bash
 sine-animator --waves 15 --speed 40 --save high_quality.mp4
 ```
+
+## Program Behavior
+
+- **Display Mode**: Animation plays on screen, then prompts "Press Enter to exit" when complete
+- **Save Mode**: Animation renders offscreen with progress indicator, saves file, then prompts to exit
+- **Auto-Exit**: Program terminates cleanly with `sys.exit()` after user confirmation
 
 ## API Reference
 

@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [2.0.0] - 2025-01-14
+## [2.0.0] - 2025-08-13
 
 ### Added
 - **Dual envelope modes**: Support for both pointwise maximum and wave sum envelopes via `--envelope` flag
@@ -16,30 +16,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Export capabilities**: Save animations as GIF or MP4 files with `--save` option
 - **MP4 support**: High-quality video export with ffmpeg (30fps, 1800 bitrate)
 - **Dynamic y-axis scaling**: Automatic calculation based on actual envelope values
-- **Improved visual feedback**: Warning messages when saving animations
+- **Exit on completion**: Animation prompts for Enter key and exits cleanly after completion
+- **Progress indicators**: Frame counter during save operations
 - **Python 3.10+ type hints**: Updated to use modern Python type annotations
 
 ### Changed
 - **Breaking**: Requires Python 3.10+ (previously 3.8+)
 - **Breaking**: `save_gif` parameter replaced with `save_filename` in `run_animation()`
+- **Breaking**: When using `--save`, animation only runs once (offscreen) instead of dual-pass
 - Y-axis bounds now calculated from actual envelope data for accurate margins
 - Envelope type can be selected via `--envelope` flag (max or sum)
-- Animation runs twice when saving (once to save, once to display)
+- Animation exits automatically after completion with sys.exit()
+- Save operations use explicit frame counts to prevent infinite loops
 - Type hints modernized to Python 3.10+ style (list[] instead of List[], tuple[] instead of Tuple[])
 
 ### Fixed
 - Y-axis margin now correctly applies to envelope sum calculations
 - Canvas preservation during pause (no clearing on resume)
-- Typo in pause_keep_display message
+- Save operations properly complete with bounded frame counts
+- GIF files now save correctly (non-zero size)
+- MP4 save process no longer hangs indefinitely
+- Animation completion detection works for both save and display modes
 
 ### Technical
 - Removed legacy typing imports (Tuple, List, Union)
 - Improved docstring coverage for all functions
 - Better error handling for ffmpeg availability
-- Cleaner separation of save and display logic
-- Added comprehensive docstrings to all methods
+- Added `save_count` parameter to prevent unbounded frame generation
+- Implemented `_saving` flag to differentiate save vs display behavior
+- Uses sys.exit() for clean program termination
 
-## [1.0.0] - 2025-01-10
+## [1.0.0] - 2025-08-10
 
 ### Added
 - Initial release of WaveAnim
