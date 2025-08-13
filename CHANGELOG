@@ -7,7 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.0.0] - 2025-08-10
+## [2.0.0] - 2025-01-14
+
+### Added
+- **Dual envelope modes**: Support for both pointwise maximum and wave sum envelopes via `--envelope` flag
+- **Envelope-first animation**: Option to show envelope animation before individual waves with `--envelope-first`
+- **Interactive pause control**: Pause at key animation points with `--pause` flag
+- **Export capabilities**: Save animations as GIF or MP4 files with `--save` option
+- **MP4 support**: High-quality video export with ffmpeg (30fps, 1800 bitrate)
+- **Dynamic y-axis scaling**: Automatic calculation based on actual envelope values
+- **Improved visual feedback**: Warning messages when saving animations
+- **Python 3.10+ type hints**: Updated to use modern Python type annotations
+
+### Changed
+- **Breaking**: Requires Python 3.10+ (previously 3.8+)
+- **Breaking**: `save_gif` parameter replaced with `save_filename` in `run_animation()`
+- Y-axis bounds now calculated from actual envelope data for accurate margins
+- Envelope type can be selected via `--envelope` flag (max or sum)
+- Animation runs twice when saving (once to save, once to display)
+- Type hints modernized to Python 3.10+ style (list[] instead of List[], tuple[] instead of Tuple[])
+
+### Fixed
+- Y-axis margin now correctly applies to envelope sum calculations
+- Canvas preservation during pause (no clearing on resume)
+- Typo in pause_keep_display message
+
+### Technical
+- Removed legacy typing imports (Tuple, List, Union)
+- Improved docstring coverage for all functions
+- Better error handling for ffmpeg availability
+- Cleaner separation of save and display logic
+- Added comprehensive docstrings to all methods
+
+## [1.0.0] - 2025-01-10
 
 ### Added
 - Initial release of WaveAnim
@@ -37,5 +69,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Modular class-based architecture
 - Clean separation of concerns
 
-[Unreleased]: https://github.com/FNNDSC/waveAnim/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/FNNDSC/waveAnim/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/FNNDSC/waveAnim/compare/v1.0.0...v2.0.0
 [1.0.0]: https://github.com/FNNDSC/waveAnim/releases/tag/v1.0.0
