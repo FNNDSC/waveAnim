@@ -156,9 +156,9 @@ dmypy.json
 .pytest_cache/
 
 # Animation output files
-*.gif
-*.mp4
-*.avi
+#*.gif
+#*.mp4
+#*.avi
 
 # IDE specific files
 .vscode/
